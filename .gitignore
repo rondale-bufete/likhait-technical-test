@@ -12,6 +12,8 @@
 /backend/tmp/*
 !/backend/log/.keep
 !/backend/tmp/.keep
+/backend/vendor/
+/backend/vendor/bundle
 
 # Ignore pidfiles, but keep the directory.
 /backend/tmp/pids/*
