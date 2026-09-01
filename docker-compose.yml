@@ -55,9 +55,12 @@ services:
     command: >
       sh -c "
         bundle install &&
-        rails db:migrate &&
-        rails db:seed &&
-        rails server -b 0.0.0.0
+        for i in 1 2 3 4 5; do
+          bundle exec rails db:migrate 2>&1 && break || sleep 10
+        done &&
+        bundle exec rails db:seed &&
+        rm -f /rails/tmp/pids/server.pid &&
+        bundle exec rails server -b 0.0.0.0
       "
     networks:
       - expense_network
