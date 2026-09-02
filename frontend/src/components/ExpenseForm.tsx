@@ -2,11 +2,11 @@
  * Form component for adding/editing expenses
  */
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ExpenseFormData } from "../types";
-import { EXPENSE_CATEGORIES } from "../constants/categories";
-import { TextField, SelectBox, Button } from "../vibes";
+import { TextField, SelectBox, Button, Modal } from "../vibes";
 import { useExpenseForm } from "../hooks/useExpenseForm";
+import { fetchCategories, createCategory } from "../services/api";
 
 interface ExpenseFormProps {
   initialData?: Partial<ExpenseFormData>;
@@ -26,6 +26,57 @@ export function ExpenseForm({
       initialData,
       onSubmit,
     });
+  const [categoryOptions, setCategoryOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryError, setNewCategoryError] = useState("");
+  const [isCategoryLoading, setIsCategoryLoading] = useState(true);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categories = await fetchCategories();
+        const options = categories.map((category) => ({
+          value: category.name,
+          label: category.name,
+        }));
+        setCategoryOptions(options);
+      } catch (error) {
+        console.error("Failed to load categories", error);
+      } finally {
+        setIsCategoryLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  const handleCreateCategory = async () => {
+    const trimmedName = newCategoryName.trim();
+
+    if (!trimmedName) {
+      setNewCategoryError("Category name is required");
+      return;
+    }
+
+    try {
+      const created = await createCategory(trimmedName);
+      setCategoryOptions((prev) => [
+        ...prev,
+        { value: created.name, label: created.name },
+      ]);
+      handleChange("category", created.name);
+      setNewCategoryName("");
+      setNewCategoryError("");
+      setIsAddCategoryModalOpen(false);
+    } catch (error) {
+      setNewCategoryError(
+        error instanceof Error ? error.message : "Unable to create category",
+      );
+    }
+  };
 
   const formStyle: React.CSSProperties = {
     display: "flex",
@@ -39,13 +90,9 @@ export function ExpenseForm({
     marginTop: "0.5rem",
   };
 
-  const categoryOptions = EXPENSE_CATEGORIES.map((category) => ({
-    value: category,
-    label: category,
-  }));
-
   return (
-    <form onSubmit={handleSubmit} style={formStyle}>
+    <>
+      <form onSubmit={handleSubmit} style={formStyle}>
       <TextField
         label="Amount"
         type="number"
@@ -69,15 +116,26 @@ export function ExpenseForm({
         required
       />
 
-      <SelectBox
-        label="Category"
-        options={categoryOptions}
-        value={formData.category}
-        onChange={(e) => handleChange("category", e.target.value)}
-        error={errors.category}
-        fullWidth
-        required
-      />
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
+        <div style={{ flex: 1 }}>
+          <SelectBox
+            label="Category"
+            options={categoryOptions}
+            value={formData.category}
+            onChange={(e) => handleChange("category", e.target.value)}
+            error={errors.category}
+            fullWidth
+            required
+          />
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setIsAddCategoryModalOpen(true)}
+        >
+          Add Category
+        </Button>
+      </div>
 
       <TextField
         label="Date"
@@ -109,6 +167,47 @@ export function ExpenseForm({
           </Button>
         )}
       </div>
-    </form>
+
+      <Modal
+        isOpen={isAddCategoryModalOpen}
+        onClose={() => {
+          setIsAddCategoryModalOpen(false);
+          setNewCategoryName("");
+          setNewCategoryError("");
+        }}
+        title="Add Category"
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <TextField
+            label="Category name"
+            value={newCategoryName}
+            onChange={(e) => {
+              setNewCategoryName(e.target.value);
+              if (newCategoryError) setNewCategoryError("");
+            }}
+            placeholder="e.g. Groceries"
+            error={newCategoryError}
+            fullWidth
+          />
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsAddCategoryModalOpen(false);
+                setNewCategoryName("");
+                setNewCategoryError("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="button" variant="primary" onClick={handleCreateCategory}>
+              Save Category
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      </form>
+    </>
   );
 }
