@@ -36,6 +36,25 @@ export function getDaysInMonth(year: number, month: number): number {
 }
 
 /**
+ * Get today's date in YYYY-MM-DD format
+ */
+export function getTodayDate(): string {
+  return formatDate(new Date());
+}
+
+/**
+ * Check if a date string is in the future
+ */
+export function isFutureDate(dateString: string): boolean {
+  const inputDate = new Date(dateString);
+  const today = new Date();
+  // Reset time to midnight for fair comparison
+  today.setHours(0, 0, 0, 0);
+  inputDate.setHours(0, 0, 0, 0);
+  return inputDate > today;
+}
+
+/**
  * Group expenses by day
  */
 export function groupExpensesByDay(expenses: Expense[]) {
